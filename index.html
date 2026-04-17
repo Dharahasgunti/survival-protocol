@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Protocol: Life Link | Lab Experiment</title>
+    <title>Protocol: Escape | Lab Win Edition</title>
     <style>
         :root {
             --steel-grey: #2a2e35;
@@ -11,6 +11,7 @@
             --screen-green: #00ff41;
             --danger-red: #ff3e3e;
             --caution-yellow: #ffcc00;
+            --win-blue: #00d4ff;
         }
 
         body {
@@ -42,13 +43,6 @@
             padding: 10px;
         }
 
-        #lives-container {
-            display: flex;
-            flex-wrap: wrap;
-            max-width: 50%;
-            gap: 5px;
-        }
-
         .heart { color: var(--danger-red); text-shadow: 0 0 8px var(--danger-red); font-size: 1.2rem; }
 
         /* Menu */
@@ -68,7 +62,6 @@
 
         /* Game */
         #game-screen { display: none; width: 100%; }
-
         #score-display { font-size: 6rem; color: white; margin: 10px 0; display: block; }
 
         .door-grid {
@@ -91,26 +84,27 @@
             transition: 0.1s;
         }
 
-        .door:hover { border-color: var(--caution-yellow); color: white; transform: translateY(-5px); }
+        .door:hover { border-color: var(--caution-yellow); color: white; }
 
-        /* Game Over */
-        #game-over {
+        /* Overlays (Win & Loss) */
+        .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.98);
             display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100;
         }
 
         .restart-btn {
             margin-top: 20px; padding: 12px 30px;
-            background: var(--danger-red); border: none; color: white; cursor: pointer;
+            border: none; color: white; cursor: pointer; font-weight: bold;
         }
     </style>
 </head>
 <body>
 
     <div id="menu-screen">
-        <h1 style="color: var(--caution-yellow);">LIFE-LINK PROTOCOL</h1>
-        <p>Correct Guess = +1 Life | Wrong Guess = -1 Life</p>
+        <h1 style="color: var(--caution-yellow);">LAB ESCAPE</h1>
+        <p>Goal: Reach 5 Lives to Escape the Lab!</p>
         <button class="mode-btn" onclick="startGame(2)">Easy (2 Doors)</button>
         <button class="mode-btn" onclick="startGame(3)">Medium (3 Doors)</button>
         <button class="mode-btn" onclick="startGame(5)">Hard (5 Doors)</button>
@@ -125,15 +119,21 @@
         <div class="door-grid" id="door-grid"></div>
     </div>
 
-    <div id="game-over">
-        <h1 style="color: var(--danger-red); font-size: 3rem;">SYSTEM CRITICAL: FAILED</h1>
-        <p id="final-stats"></p>
-        <button class="restart-btn" onclick="location.reload()">RE-INITIALIZE</button>
+    <div id="win-overlay" class="overlay">
+        <h1 style="color: var(--win-blue); font-size: 3rem;">MISSION ACCOMPLISHED</h1>
+        <p style="color: white;">Protocol Complete. You have escaped the lab!</p>
+        <button class="restart-btn" style="background: var(--win-blue);" onclick="location.reload()">PLAY AGAIN</button>
+    </div>
+
+    <div id="game-over" class="overlay">
+        <h1 style="color: var(--danger-red); font-size: 3rem;">SYSTEM FAILED</h1>
+        <p id="final-stats" style="color: white;"></p>
+        <button class="restart-btn" style="background: var(--danger-red);" onclick="location.reload()">RE-INITIALIZE</button>
     </div>
 
     <script>
         let score = 0;
-        let lives = 1; // Start with 1 life
+        let lives = 1; 
         let activeDoorCount = 2;
         let highScore = localStorage.getItem('lifeLinkBest') || 0;
         document.getElementById('high-score').innerText = highScore;
@@ -152,12 +152,9 @@
             document.getElementById('score-display').innerText = score;
             const container = document.getElementById('lives-container');
             container.innerHTML = '';
-            // Limit display to 20 hearts so it doesn't break the layout
-            let displayLives = Math.min(lives, 20); 
-            for(let i=0; i < displayLives; i++) {
+            for(let i=0; i < lives; i++) {
                 container.innerHTML += '<span class="heart">❤️</span>';
             }
-            if(lives > 20) container.innerHTML += ` +${lives - 20}`;
         }
 
         function renderDoors() {
@@ -166,7 +163,7 @@
             for (let i = 1; i <= activeDoorCount; i++) {
                 const door = document.createElement('div');
                 door.className = 'door';
-                door.innerText = `PORT_${i}`;
+                door.innerText = `UNIT_${i}`;
                 door.onclick = () => makeChoice(i);
                 grid.appendChild(door);
             }
@@ -177,21 +174,29 @@
 
             if (choice === correctDoor) {
                 score++;
-                lives++; // ADD LIFE ON SUCCESS
+                lives++;
                 document.body.style.backgroundColor = "#001a06";
             } else {
-                lives--; // LOSE LIFE ON FAILURE
+                lives--;
                 document.body.style.backgroundColor = "#2a0000";
             }
             
             setTimeout(() => document.body.style.backgroundColor = "#121417", 100);
             updateUI();
 
-            if (lives <= 0) {
+            // CHECK FOR WIN OR LOSS
+            if (lives >= 5) {
+                showWin();
+            } else if (lives <= 0) {
                 endGame();
             } else {
                 renderDoors();
             }
+        }
+
+        function showWin() {
+            if (score > highScore) localStorage.setItem('lifeLinkBest', score);
+            document.getElementById('win-overlay').style.display = 'flex';
         }
 
         function endGame() {
@@ -199,7 +204,7 @@
                 highScore = score;
                 localStorage.setItem('lifeLinkBest', highScore);
             }
-            document.getElementById('final-stats').innerHTML = `SURVIVAL TIME: ${score} UNITS | BEST: ${highScore}`;
+            document.getElementById('final-stats').innerHTML = `SURVIVAL SCORE: ${score} | BEST: ${highScore}`;
             document.getElementById('game-over').style.display = 'flex';
         }
     </script>
