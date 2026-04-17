@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protocol: Life Link | Lab Experiment</title>
+    <style>
+        :root {
+            --steel-grey: #2a2e35;
+            --dark-metal: #121417;
+            --screen-green: #00ff41;
+            --danger-red: #ff3e3e;
+            --caution-yellow: #ffcc00;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--dark-metal);
+            background-image: 
+                linear-gradient(rgba(0, 255, 65, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 65, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            color: var(--screen-green);
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        /* Status Header */
+        .header-stats {
+            position: absolute;
+            top: 10px;
+            width: 90%;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 2px solid var(--steel-grey);
+            padding: 10px;
+        }
+
+        #lives-container {
+            display: flex;
+            flex-wrap: wrap;
+            max-width: 50%;
+            gap: 5px;
+        }
+
+        .heart { color: var(--danger-red); text-shadow: 0 0 8px var(--danger-red); font-size: 1.2rem; }
+
+        /* Menu */
+        #menu-screen { display: flex; flex-direction: column; gap: 15px; }
+
+        .mode-btn {
+            padding: 15px 40px;
+            background: transparent;
+            border: 2px solid var(--screen-green);
+            color: var(--screen-green);
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .mode-btn:hover { background: var(--screen-green); color: black; }
+
+        /* Game */
+        #game-screen { display: none; width: 100%; }
+
+        #score-display { font-size: 6rem; color: white; margin: 10px 0; display: block; }
+
+        .door-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .door {
+            width: 100px;
+            height: 160px;
+            background: #1a1d23;
+            border: 3px solid var(--steel-grey);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.1s;
+        }
+
+        .door:hover { border-color: var(--caution-yellow); color: white; transform: translateY(-5px); }
+
+        /* Game Over */
+        #game-over {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.98);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        .restart-btn {
+            margin-top: 20px; padding: 12px 30px;
+            background: var(--danger-red); border: none; color: white; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="menu-screen">
+        <h1 style="color: var(--caution-yellow);">LIFE-LINK PROTOCOL</h1>
+        <p>Correct Guess = +1 Life | Wrong Guess = -1 Life</p>
+        <button class="mode-btn" onclick="startGame(2)">Easy (2 Doors)</button>
+        <button class="mode-btn" onclick="startGame(3)">Medium (3 Doors)</button>
+        <button class="mode-btn" onclick="startGame(5)">Hard (5 Doors)</button>
+    </div>
+
+    <div id="game-screen">
+        <div class="header-stats">
+            <div id="lives-container"></div>
+            <div>BEST: <span id="high-score">0</span></div>
+        </div>
+        <span id="score-display">0</span>
+        <div class="door-grid" id="door-grid"></div>
+    </div>
+
+    <div id="game-over">
+        <h1 style="color: var(--danger-red); font-size: 3rem;">SYSTEM CRITICAL: FAILED</h1>
+        <p id="final-stats"></p>
+        <button class="restart-btn" onclick="location.reload()">RE-INITIALIZE</button>
+    </div>
+
+    <script>
+        let score = 0;
+        let lives = 1; // Start with 1 life
+        let activeDoorCount = 2;
+        let highScore = localStorage.getItem('lifeLinkBest') || 0;
+        document.getElementById('high-score').innerText = highScore;
+
+        function startGame(doors) {
+            activeDoorCount = doors;
+            score = 0;
+            lives = 1; 
+            updateUI();
+            document.getElementById('menu-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            renderDoors();
+        }
+
+        function updateUI() {
+            document.getElementById('score-display').innerText = score;
+            const container = document.getElementById('lives-container');
+            container.innerHTML = '';
+            // Limit display to 20 hearts so it doesn't break the layout
+            let displayLives = Math.min(lives, 20); 
+            for(let i=0; i < displayLives; i++) {
+                container.innerHTML += '<span class="heart">❤️</span>';
+            }
+            if(lives > 20) container.innerHTML += ` +${lives - 20}`;
+        }
+
+        function renderDoors() {
+            const grid = document.getElementById('door-grid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= activeDoorCount; i++) {
+                const door = document.createElement('div');
+                door.className = 'door';
+                door.innerText = `PORT_${i}`;
+                door.onclick = () => makeChoice(i);
+                grid.appendChild(door);
+            }
+        }
+
+        function makeChoice(choice) {
+            const correctDoor = Math.floor(Math.random() * activeDoorCount) + 1;
+
+            if (choice === correctDoor) {
+                score++;
+                lives++; // ADD LIFE ON SUCCESS
+                document.body.style.backgroundColor = "#001a06";
+            } else {
+                lives--; // LOSE LIFE ON FAILURE
+                document.body.style.backgroundColor = "#2a0000";
+            }
+            
+            setTimeout(() => document.body.style.backgroundColor = "#121417", 100);
+            updateUI();
+
+            if (lives <= 0) {
+                endGame();
+            } else {
+                renderDoors();
+            }
+        }
+
+        function endGame() {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('lifeLinkBest', highScore);
+            }
+            document.getElementById('final-stats').innerHTML = `SURVIVAL TIME: ${score} UNITS | BEST: ${highScore}`;
+            document.getElementById('game-over').style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
